@@ -1,0 +1,40 @@
+﻿@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+@code {
+    [Parameter, EditorRequired]
+    public EventCallback OnBottomReached { get; set; }
+
+    [Parameter]
+    public string ElementId { get; set; }
+
+    private bool _isLoading = false;
+
+    private DotNetObjectReference<InfiniteScroller>? _thisObjRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _thisObjRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("InfiniteScrollerHandler.setDotnetReference", _thisObjRef, ElementId);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnScrollReachedBottom()
+    {
+        if (_isLoading)
+            return;
+
+        _isLoading = true;
+        await OnBottomReached.InvokeAsync();
+        _isLoading = false;
+    }
+
+    async void IDisposable.Dispose()
+    {
+        await JSRuntime.InvokeVoidAsync("InfiniteScrollerHandler.unsetDotnetReference", _thisObjRef, ElementId);
+        _thisObjRef?.Dispose();
+    }
+}
